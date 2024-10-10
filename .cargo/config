@@ -1,0 +1,2 @@
+[target.x86_64-pc-windows-msvc]
+linker = "~/Repos/msvc-wine-rust/linker-scripts/linkx64.sh"
