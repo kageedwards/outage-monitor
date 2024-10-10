@@ -1,6 +1,7 @@
+[![Build Status][build-shield]][build-url]
+[![Issues][issues-shield]][issues-url]
 [![Forks][forks-shield]][forks-url]
 [![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
 [![MIT License][license-shield]][license-url]
 [![LinkedIn][linkedin-shield]][linkedin-url]
 
@@ -17,6 +18,8 @@ I created a CLI application to poll SCL power outage data and determine if a par
 
 Naturally, the outage monitor cannot run at the location being monitored.
 
+[build-shield]: https://img.shields.io/github/actions/workflow/status/kageedwards/outage-monitor/rust.yml?style=for-the-badge
+[build-url]: https://github.com/kageedwards/outage-monitor/actions
 [forks-shield]: https://img.shields.io/github/forks/kageedwards/outage-monitor.svg?style=for-the-badge
 [forks-url]: https://github.com/kageedwards/outage-monitor/network/members
 [stars-shield]: https://img.shields.io/github/stars/kageedwards/outage-monitor.svg?style=for-the-badge
