@@ -7,7 +7,7 @@ use ansi_term::Colour::Red;
 use teloxide::prelude::*;
 
 const SCL_OUTAGE_LIST_URL: &str = "https://utilisocial.io/datacapable/v2/p/scl/map/events";
-const SCL_LAST_UPDATE_URL: &str = "https://utilisocial.io/datacapable/v2/p/scl/map/lastUpdated";
+const SCL_LAST_UPDATE_URL: &str = "https://utilisocial.io/datacapable/v2/p/scl/map/stats";
 const SCL_POLLING_INTERVAL_IN_MINS: u64 = 5;
 
 /** 
@@ -72,6 +72,12 @@ struct SpatialReference {
     #[serde(rename = "latestWkid")]
     latest_wkid: i32,
     wkid: i32
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct StatsResponse {
+    #[serde(rename = "lastUpdatedTime")]
+    last_updated_time: String
 }
 
 /* END: JSON Response Body Structures */
@@ -230,17 +236,19 @@ async fn fetch_outages() -> Result<Vec<Outage>> {
  *  Requests the `SCL_LAST_UPDATE_URL` endpoint to determine if our current outage data is stale
  *   
  *  @return     Result<i64> : Result-wrapped UNIX timestamp as a signed 64-bit integer, designating the time of the last update on the server
- *  @propagates Request errors, Parse errors
+ *  @propagates Request errors, JSON deserialization errors, Parse errors
 */
 async fn fetch_last_update() -> Result<i64> {
     dbg_println!("Checking for updates...");
 
-    let last_update_response: String = reqwest::get(SCL_LAST_UPDATE_URL)
-        .await?
-        .text()
-        .await?;
+    let response: Response = reqwest::get(SCL_LAST_UPDATE_URL).await?;
 
-    let last_update = last_update_response.parse::<i64>()?;
+    // This method is more verbose, but `serde_json` propagates more
+    // detailed error information than the `response.json()` method does.
+    let stats_stream = response.bytes().await?;
+    let stats_data = serde_json::from_slice::<StatsResponse>(&stats_stream)?;
+    
+    let last_update = stats_data.last_updated_time.parse::<i64>()?;
 
     Ok(last_update)
 }
