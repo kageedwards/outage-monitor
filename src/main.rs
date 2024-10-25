@@ -249,6 +249,9 @@ async fn fetch_last_update() -> Result<i64> {
  *  Sends an HTTP request to a specified endpoint and returns an attempted
  *  deserialization of a JSON response into the generic type T
  *   
+ *  @typeParam  T : the type into which the JSON response should be deserialized (must derive Deserialize)
+ *  @param      &str : url : the URL of the endpoint being requested
+ * 
  *  @return     Result<T> : Result-wrapped object of type T
  *  @propagates Request errors, JSON deserialization errors
 */
