@@ -223,13 +223,9 @@ async fn main() -> Result<()> {
 async fn fetch_outages() -> Result<Vec<Outage>> {
     dbg_println!("Fetching new outage data...");
 
-    let response: Response = reqwest::get(SCL_OUTAGE_LIST_URL).await?;
-    
-    // This method is more verbose, but `serde_json` propagates more
-    // detailed error information than the `response.json()` method does.
-    let outages_data = response.bytes().await?;
+    let outages_data = fetch::<Vec<Outage>>(SCL_OUTAGE_LIST_URL).await?;
 
-    Ok(serde_json::from_slice::<Vec<Outage>>(&outages_data)?)
+    Ok(outages_data)
 }
 
 /**
@@ -241,16 +237,29 @@ async fn fetch_outages() -> Result<Vec<Outage>> {
 async fn fetch_last_update() -> Result<i64> {
     dbg_println!("Checking for updates...");
 
-    let response: Response = reqwest::get(SCL_LAST_UPDATE_URL).await?;
+    let stats_data = fetch::<StatsResponse>(SCL_LAST_UPDATE_URL).await?;
 
-    // This method is more verbose, but `serde_json` propagates more
-    // detailed error information than the `response.json()` method does.
-    let stats_stream = response.bytes().await?;
-    let stats_data = serde_json::from_slice::<StatsResponse>(&stats_stream)?;
-    
     let last_update = stats_data.last_updated_time.parse::<i64>()?;
 
     Ok(last_update)
+}
+
+
+/**
+ *  Sends an HTTP request to a specified endpoint and returns an attempted
+ *  deserialization of a JSON response into the generic type T
+ *   
+ *  @return     Result<T> : Result-wrapped object of type T
+ *  @propagates Request errors, JSON deserialization errors
+*/
+async fn fetch<T: serde::de::DeserializeOwned>(url: &str) -> Result<T> {
+    let response: Response = reqwest::get(url).await?;
+    
+    // This method is more verbose, but `serde_json` propagates more
+    // detailed error information than the `response.json()` method does.
+    let data = response.bytes().await?;
+
+    Ok(serde_json::from_slice::<T>(&data)?)
 }
 
 /**
