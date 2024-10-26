@@ -1,143 +1,23 @@
+mod constants;
+mod helpers;
+mod response_structs;
+mod state;
+
 use parking_lot::Mutex;
-use reqwest::Response;
-use geo::{point, Coord, Intersects, LineString, Point, Polygon, Rect};
-use serde::{Deserialize, Serialize};
 use tokio::time::{Duration, MissedTickBehavior};
-use ansi_term::Colour::Red;
-use teloxide::prelude::*;
+use ansi_term::Colour::Red as ErrorColor;
+use teloxide::prelude::Requester;
+use reqwest::Response;
+use geo::{point, Coord, Intersects, LineString, Polygon, Rect};
 
-const SCL_OUTAGE_LIST_URL: &str = "https://utilisocial.io/datacapable/v2/p/scl/map/events";
-const SCL_LAST_UPDATE_URL: &str = "https://utilisocial.io/datacapable/v2/p/scl/map/stats";
-const SCL_POLLING_INTERVAL_IN_MINS: u64 = 5;
+/**
+ * Adjust location coordinates and Telegram credentials in constants.rs
+ */
 
-/** 
- * TODO:
- * Replace with the coordinates of the location in Seattle we're monitoring power for,
- * in WGS84 "projection" - yes, degrees
-*/
-const LOCATION: Point = Point(Coord {x: -122.3507297, y: 47.6205405});
-const RADIUS: f64 = 0.000125; // technically, we'll be using a square, not a circle, as our "radius"
-
-/** 
- * TODO:
- * Enter the BOT TOKEN and CHAT ID provided by Telegram for sending messages
- * using your Telegram bot.
-*/
-const TELEGRAM_BOT_TOKEN: &str = "1234567890:AbCdEfGhIjKlMnOpQrStUvWxYz";
-const TELEGRAM_CHAT_ID: &str = "-1234512345123";
-
-
-// A macro to gracefully ignore println! statements if we aren't in debug mode.
-#[macro_export]
-macro_rules! dbg_println {
-    ($($arg:tt)*) => (#[cfg(debug_assertions)] println!($($arg)*));
-}
-
-// A simple type alias to simplify error propagation from disparate sources (DRY).
-type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
-
-
-/* JSON Response Body Structures */
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct Outage {
-    id: i32,
-    #[serde(rename = "type")]
-    outage_type: Option<String>,
-    // #[serde(rename = "startTime")]
-    // start_time: u64,
-    // #[serde(rename = "lastUpdatedTime")]
-    // last_updated_time: u64,
-    // #[serde(rename = "etrTime")]
-    // etr_time: u64,
-    #[serde(default, rename = "numPeople")]
-    people_affected: Option<i32>,
-    #[serde(default)]
-    status: String,
-    #[serde(default)]
-    cause: Option<String>,
-    polygons: OutagePolygon
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct OutagePolygon {
-    #[serde(rename= "spatialReference")]
-    spatial_reference: Option<SpatialReference>,
-    #[serde(rename = "rings")]
-    areas: Vec<Vec<Vec<f64>>>
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct SpatialReference {
-    #[serde(rename = "latestWkid")]
-    latest_wkid: i32,
-    wkid: i32
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct StatsResponse {
-    #[serde(rename = "lastUpdatedTime")]
-    last_updated_time: String
-}
-
-/* END: JSON Response Body Structures */
-
-enum PowerStatus {
-    OFFLINE,
-    ONLINE
-}
-
-struct ApplicationState {
-    status: Mutex<PowerStatus>,
-    last_update: Mutex<i64>,
-    outages: Mutex<Vec<Outage>>,
-    telegram: Mutex<Bot>
-}
-
-impl ApplicationState {
-    fn new() -> ApplicationState {
-        ApplicationState {
-            status: Mutex::new(PowerStatus::ONLINE),
-            last_update: Mutex::new(0i64),
-            outages: Mutex::new(vec![]),
-            telegram: Mutex::new(Bot::new(TELEGRAM_BOT_TOKEN))
-        }
-    }
-
-    fn is_new_data_available(&self, timestamp: i64) -> bool {
-        let mut last_update = self.last_update.lock();
-        let mut is_available = false;
-
-        if timestamp > *last_update {
-            dbg_println!("New data is available.");
-            *last_update = timestamp;
-
-            is_available = true;
-        }
-
-        is_available
-    }
-
-    fn update_data(&self, mut items: Vec<Outage>) {
-        let mut outages = self.outages.lock();
-
-        outages.clear();
-        outages.append(&mut items);
-    }
-
-    fn get_data(&self) -> Mutex<Vec<Outage>> {
-        let outages = self.outages.lock();
-
-        Mutex::new(outages.to_vec())
-    }
-
-    fn send_telegram(&self) -> Bot {
-        let bot = self.telegram.lock();
-        
-        //Mutex::new(bot.clone())
-        bot.clone()
-    }
-}
+use crate::constants::*;
+use crate::helpers::Result;
+use crate::response_structs::{Outage, StatsResponse};
+use crate::state::ApplicationState;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -155,7 +35,7 @@ async fn main() -> Result<()> {
         let is_data_available = match fetch_last_update().await {
             Ok(timestamp) => state.is_new_data_available(timestamp),
             Err(err) => {
-                dbg_println!("{}", Red.paint("Timestamp update has failed."));
+                dbg_println!("{}", ErrorColor.paint("Timestamp update has failed."));
                 dbg_println!("{:?}", err.to_string());
                 false
             }
@@ -165,13 +45,13 @@ async fn main() -> Result<()> {
             match fetch_outages().await {
                 Ok(items) => state.update_data(items),
                 Err(err) => {
-                    dbg_println!("{}", Red.paint("Outage data request failed."));
+                    dbg_println!("{}", ErrorColor.paint("Outage data request failed."));
                     dbg_println!("{:?}", err.to_string());
                 }
             }
         }
         
-        match fetch_power_status(state.get_data()).await {
+        match check_power_status(state.get_data()).await {
             Ok(is_now_online) => {
                 let mut stored_online_status = state.status.lock();
 
@@ -203,7 +83,7 @@ async fn main() -> Result<()> {
                 }
             },
             Err(err) => {
-                dbg_println!("{}", Red.paint("Failed to process outage data."));
+                dbg_println!("{}", ErrorColor.paint("Failed to process outage data."));
                 dbg_println!("{:?}", err.to_string());
             }
         }
@@ -244,7 +124,6 @@ async fn fetch_last_update() -> Result<i64> {
     Ok(last_update)
 }
 
-
 /**
  *  Sends an HTTP request to a specified endpoint and returns an attempted
  *  deserialization of a JSON response into the generic type T
@@ -272,7 +151,7 @@ async fn fetch<T: serde::de::DeserializeOwned>(url: &str) -> Result<T> {
  *   
  *  @return Result<bool> : Result-wrapped boolean designating whether the power is currently ONLINE
 */
-async fn fetch_power_status(outages: Mutex<Vec<Outage>>) -> Result<bool> {
+async fn check_power_status(outages: Mutex<Vec<Outage>>) -> Result<bool> {
     dbg_println!("Processing outage data...");
 
     let known_outages = outages.lock();
