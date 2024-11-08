@@ -157,7 +157,7 @@ async fn fetch<T: serde::de::DeserializeOwned>(url: &str) -> Result<T> {
 /// Parses the polygonal areas of each affected power outage area and returns whether power is online or not
 ///
 /// Parameters
-/// - `outages`: a mutually exclusive reference to a list of power outages (@see `struct Outage`)
+/// - `outages`: a mutually exclusive reference to a list of power outages (see `Outage`)
 /// 
 /// Returns
 /// - `Result<bool>` : Result-wrapped boolean designating whether the power is currently ONLINE
