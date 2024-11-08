@@ -94,12 +94,14 @@ async fn main() -> Result<()> {
 
 }
 
-/**
- *  Requests the latest outage data from the `SCL_OUTAGE_LIST_URL` endpoint, and returns a deserialized list. 
- *   
- *  @return     Result<Vec<Outage>> : Result-wrapped list of current power outages, deserialized into `Outage` instances
- *  @propagates Request errors, JSON deserialization errors
-*/
+/// Requests the latest outage data from the `SCL_OUTAGE_LIST_URL` endpoint, and returns a deserialized list. 
+/// 
+/// Returns
+/// - `Result<Vec<Outage>>`: Result-wrapped list of current power outages, deserialized into `Outage` instances
+/// 
+/// Errors
+/// - Request errors (see [`reqwest::Response`])
+/// - JSON deserialization errors (see [`serde_json::from_slice`])
 async fn fetch_outages() -> Result<Vec<Outage>> {
     dbg_println!("Fetching new outage data...");
 
@@ -108,12 +110,15 @@ async fn fetch_outages() -> Result<Vec<Outage>> {
     Ok(outages_data)
 }
 
-/**
- *  Requests the `SCL_LAST_UPDATE_URL` endpoint to determine if our current outage data is stale
- *   
- *  @return     Result<i64> : Result-wrapped UNIX timestamp as a signed 64-bit integer, designating the time of the last update on the server
- *  @propagates Request errors, JSON deserialization errors, Parse errors
-*/
+/// Requests the `SCL_LAST_UPDATE_URL` endpoint to determine if our current outage data is stale
+/// 
+/// Returns
+/// - `Result<i64>`: Result-wrapped UNIX timestamp as a signed 64-bit integer, designating the time of the last update on the server
+/// 
+/// Errors
+/// - Request errors (see [`reqwest::Response`])
+/// - JSON deserialization errors (see [`serde_json::from_slice`])
+/// - Parse errors
 async fn fetch_last_update() -> Result<i64> {
     dbg_println!("Checking for updates...");
 
@@ -124,16 +129,21 @@ async fn fetch_last_update() -> Result<i64> {
     Ok(last_update)
 }
 
-/**
- *  Sends an HTTP request to a specified endpoint and returns an attempted
- *  deserialization of a JSON response into the generic type T
- *   
- *  @typeParam  T : the type into which the JSON response should be deserialized (must derive Deserialize)
- *  @param      &str : url : the URL of the endpoint being requested
- * 
- *  @return     Result<T> : Result-wrapped object of type T
- *  @propagates Request errors, JSON deserialization errors
-*/
+/// Sends an HTTP request to a specified endpoint and returns an attempted
+/// deserialization of a JSON response into the generic type T
+/// 
+/// Type Parameters
+/// - `T`: the type into which the JSON response should be deserialized (must derive [`serde::Deserialize`])
+/// 
+/// Parameters
+/// - `url`: the URL of the endpoint being requested
+/// 
+/// Returns
+/// - `Result<T>` : Result-wrapped object of type T
+/// 
+/// Errors
+/// - Request errors (see [`reqwest::Response`])
+/// - JSON deserialization errors (see [`serde_json::from_slice`])
 async fn fetch<T: serde::de::DeserializeOwned>(url: &str) -> Result<T> {
     let response: Response = reqwest::get(url).await?;
     
@@ -144,13 +154,13 @@ async fn fetch<T: serde::de::DeserializeOwned>(url: &str) -> Result<T> {
     Ok(serde_json::from_slice::<T>(&data)?)
 }
 
-/**
- *  Parses the polygonal areas of each affected power outage area and returns whether power is online or not
- *
- *  @param  Mutex<Vec<Outage>> : outages : a mutually exclusive reference to a list of power outages (@see `struct Outage`)
- *   
- *  @return Result<bool> : Result-wrapped boolean designating whether the power is currently ONLINE
-*/
+/// Parses the polygonal areas of each affected power outage area and returns whether power is online or not
+///
+/// Parameters
+/// - `outages`: a mutually exclusive reference to a list of power outages (@see `struct Outage`)
+/// 
+/// Returns
+/// - `Result<bool>` : Result-wrapped boolean designating whether the power is currently ONLINE
 async fn check_power_status(outages: Mutex<Vec<Outage>>) -> Result<bool> {
     dbg_println!("Processing outage data...");
 
