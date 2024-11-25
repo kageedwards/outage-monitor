@@ -12,7 +12,7 @@
   <hr>
 </div>
 
-_This project is a proof-of-concept and by no means designed for production use._
+_This project was designed for my own personal productivity needs and by no means intended for wide distribution or production use as-is. Use or refactor for your own needs at your own discretion_
 
 I created a CLI application to poll SCL power outage data and determine if a particular Seattle location is currently without power. Telegram alerts will be sent when power goes offline and when it returns.
 
