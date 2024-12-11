@@ -32,6 +32,8 @@ async fn main() -> Result<()> {
     loop {
         interval.tick().await;
 
+        // TODO: Instead of awaiting our async functions, use a Tokio select! macro for concurrent execution
+
         let is_data_available = match fetch_last_update().await {
             Ok(timestamp) => state.is_new_data_available(timestamp),
             Err(err) => {
