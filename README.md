@@ -36,6 +36,12 @@ location is currently without power. Telegram alerts will be sent when power goe
 
 ------------------------------------------------------------------------------------
 
+## Things That Can Be Improved
+
+#### Concurrent runtime
+
+As it stands, the application is defined asynchronously and the retrieval and analysis routines are separate, but the main loop is still executing them synchronously by awaiting the futures (promises). Using a `tokio::select!` macro would seem like an option, but it cancels remaining tasks when the first task completes. This could lead to very intermittent results. A better solution involves spawning green threads for each routine and for the shared state in the `main` loop. Extra care would need to be taken to avoid holding a mutex lock over an await or borrowing between threads. Shared state / data could be accessed across the threads using `Arc` (i.e., atomically reference-counted pointers.) Tokio also provides an alternative Mutex primitive that supports asynchronous locking. This should be safe from deadlocking as long as individual routines are revised to not block when they request a lock, except perhaps the routine updating the shared data.
+
 _This project was designed for my own productivity using APIs that are not intended for high-rate use cases. 
 Use or refactor for your own needs at your own discretion._
 
