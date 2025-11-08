@@ -6,17 +6,16 @@
 [![LinkedIn][linkedin-shield]][linkedin-url]
 
 <div align="center">
-  <hr>
-  <h3>Power Outage Monitor</h3>
-  <h4>with Telegram alerts</h4>
-  <hr>
+  
+--------------------------
+### Power Outage Monitor
+#### with Telegram alerts
+--------------------------
+
 </div>
 
-_This project was designed for my own personal productivity needs and is by no means intended for wide distribution or production use as-is. Use or refactor for your own needs at your own discretion._
-
-I created a CLI application to poll SCL power outage data and determine if a particular Seattle location is currently without power. Telegram alerts will be sent when power goes offline and when it returns.
-
-Naturally, the outage monitor cannot run at the location being monitored.
+This is a CLI application that requests SCL power outage data and determines if a particular Seattle 
+location is currently without power. Telegram alerts will be sent when power goes offline and when it returns.
 
 ------------------------------------------------------------------------------------
 
@@ -34,6 +33,11 @@ Naturally, the outage monitor cannot run at the location being monitored.
 * Using Github Workflows to run build tests
 * Demonstrating ownership over my role as assistant property manager by boosting observability
 * Having the patience to over-engineer this just enough in Rust to demonstrate all the above in one project
+
+------------------------------------------------------------------------------------
+
+_This project was designed for my own productivity using APIs that are not intended for high-rate use cases. 
+Use or refactor for your own needs at your own discretion._
 
 [build-shield]: https://img.shields.io/github/actions/workflow/status/kageedwards/outage-monitor/rust.yml?style=for-the-badge
 [build-url]: https://github.com/kageedwards/outage-monitor/actions
